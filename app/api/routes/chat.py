@@ -32,15 +32,26 @@ async def chat(
     travel_agent: TravelAgent = Depends(get_agent)
 ):
     session = store.get_or_create(req.user_id)
-    mem.add(req.user_id, "user", req.message)
+
+    print(f"DEBUG: pet_friendly received = {req.pet_friendly}")
+    
+    # Build enriched message with constraints
+    enriched_message = req.message
+    if req.pet_friendly:
+        enriched_message += "\n\nIMPORTANT CONSTRAINT: I am travelling with a pet. You MUST provide pet-friendly options only. Include a dedicated Pet Travel Tips section."
+    if req.budget:
+        enriched_message += f"\n\nBudget preference: {req.budget}"
+
+    mem.add(req.user_id, "user", enriched_message)
     system_prompt = build_system_prompt(req.user_id, long_term)
     preferences = long_term.get_preferences(req.user_id, "travel preferences", top_k=5)
 
     reply = travel_agent.run(
-        user_message=req.message,
+        user_message=enriched_message,
         conversation_history=mem.get(req.user_id),
         user_preferences=preferences,
-        system_prompt=system_prompt
+        system_prompt=system_prompt,
+        pet_friendly=req.pet_friendly
     )
 
     mem.add(req.user_id, "assistant", reply)

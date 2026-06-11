@@ -5,7 +5,7 @@ from app.tools.hotels import search_hotels
 
 TOOL_MAP = {tool.name: tool for tool in TOOLS}
 
-def execute_task(task: dict, city: str, preferences: list = None) -> dict:
+def execute_task(task: dict, city: str, preferences: list = None, pet_friendly: bool = False) -> dict:
     """Executes a single planning sub-task using the appropriate tool."""
     
     task_name = task.get("task")
@@ -18,25 +18,34 @@ def execute_task(task: dict, city: str, preferences: list = None) -> dict:
 
         elif task_name == "find_attractions":
             query = f"top attractions and things to do in {city}"
-            if preferences:
+            if pet_friendly:
+                query = f"pet friendly attractions parks and outdoor activities in {city} dogs allowed"
+            elif preferences:
                 query += f" for someone who {prefs_text}"
             result = search_web.invoke({"query": query})
 
         elif task_name == "find_restaurants":
             query = f"best restaurants in {city}"
-            if preferences:
+            if pet_friendly:
+                query = f"pet friendly restaurants with outdoor seating in {city} dogs welcome"
+            elif preferences:
                 query += f" for someone who enjoys {prefs_text}"
             result = search_web.invoke({"query": query})
 
         elif task_name == "find_hotels":
             budget = "luxury" if any("luxury" in p.lower() for p in (preferences or [])) else "moderate"
-            result = search_hotels.invoke({"city": city, "budget": budget})
+            if pet_friendly:
+                result = search_hotels.invoke({"city": f"pet friendly hotels in {city}", "budget": budget})
+            else:
+                result = search_hotels.invoke({"city": city, "budget": budget})
 
         elif task_name == "build_itinerary":
-            result = f"Compiling 2-day itinerary for {city} based on gathered information"
+            result = f"Compiling {'pet-friendly ' if pet_friendly else ''}2-day itinerary for {city}"
 
         else:
             query = f"{task.get('description', '')} in {city}"
+            if pet_friendly:
+                query += " pet friendly"
             result = search_web.invoke({"query": query})
 
     except Exception as e:
@@ -48,11 +57,11 @@ def execute_task(task: dict, city: str, preferences: list = None) -> dict:
         "result": result
     }
 
-def execute_plan(plan: list, city: str, preferences: list = None) -> list:
+def execute_plan(plan: list, city: str, preferences: list = None, pet_friendly: bool = False) -> list:
     """Executes all tasks in a plan and returns results."""
     results = []
     for task in plan:
-        print(f"DEBUG: Executing task - {task.get('task')}")
-        result = execute_task(task, city, preferences)
+        print(f"DEBUG: Executing task - {task.get('task')} (pet_friendly={pet_friendly})")
+        result = execute_task(task, city, preferences, pet_friendly)
         results.append(result)
     return results
