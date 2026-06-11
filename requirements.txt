@@ -36,3 +36,4 @@ jiter==0.15.0
 tiktoken==0.13.0
 langsmith==0.8.11
 regex==2026.5.9
+google-search-results
